@@ -76,11 +76,13 @@ class Predictor:
         if not self._loaded:
             self.load()
 
-        # Build feature vector in correct order
-        feature_vector = np.array([[features.get(col, 0) for col in FEATURE_COLUMNS]])
+        import pandas as pd
+
+        # Build feature vector with column names to avoid sklearn UserWarning
+        df = pd.DataFrame([[features.get(col, 0) for col in FEATURE_COLUMNS]], columns=FEATURE_COLUMNS)
 
         # Scale features
-        scaled = self.preprocessor.transform(feature_vector)
+        scaled = self.preprocessor.transform(df)
 
         # Get probability
         probability = self.model.predict_proba(scaled)[0, 1]

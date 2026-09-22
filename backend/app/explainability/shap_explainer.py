@@ -44,11 +44,13 @@ class ShapExplainer:
         if not predictor.is_loaded():
             predictor.load()
 
+        import pandas as pd
+
         # Create a small background dataset for SHAP
-        # Using synthetic representative samples
+        # Using synthetic representative samples with named columns to match fitted scaler
         np.random.seed(42)
         n_background = 100
-        self._background_data = np.column_stack([
+        bg_array = np.column_stack([
             np.clip(np.random.normal(65, 20, n_background), 5, 100),   # skills_match
             np.clip(np.random.exponential(5, n_background), 0.5, 20),  # experience_years
             np.clip(np.random.normal(60, 25, n_background), 0, 100),   # education_match
@@ -57,12 +59,14 @@ class ShapExplainer:
             np.clip(np.random.exponential(3, n_background), 0, 36),    # career_gap_months
             (np.random.random(n_background) > 0.6).astype(float),     # career_gap_count
         ])
+        self._background_data = pd.DataFrame(bg_array, columns=FEATURE_COLUMNS)
 
-        # Scale background data
+        # Scale background data (no warning: named columns match fitted scaler)
         bg_scaled = predictor.preprocessor.transform(self._background_data)
 
         # Use LinearExplainer for Logistic Regression (faster, exact)
         self._explainer = shap.LinearExplainer(predictor.model, bg_scaled)
+
 
     def explain(self, features: dict) -> dict:
         """
@@ -74,9 +78,10 @@ class ShapExplainer:
         self._ensure_explainer()
         predictor = get_predictor()
 
+        import pandas as pd
         # Build feature vector
-        feature_vector = np.array([[features.get(col, 0) for col in FEATURE_COLUMNS]])
-        scaled = predictor.preprocessor.transform(feature_vector)
+        df = pd.DataFrame([[features.get(col, 0) for col in FEATURE_COLUMNS]], columns=FEATURE_COLUMNS)
+        scaled = predictor.preprocessor.transform(df)
 
         # Compute SHAP values
         shap_values = self._explainer.shap_values(scaled)

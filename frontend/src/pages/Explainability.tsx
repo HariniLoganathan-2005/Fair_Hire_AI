@@ -4,13 +4,9 @@ import {
   BrainCircuit,
   TrendingUp,
   TrendingDown,
-  User,
-  Info,
   Sparkles,
   ArrowRight,
-  HelpCircle,
-  FileText,
-  Clock
+  Loader2
 } from 'lucide-react';
 import { getScreeningResults, getExplanation, generateExplanation } from '../services/api';
 import { ScreeningResult, Explanation } from '../types';
@@ -28,6 +24,7 @@ export const Explainability: React.FC = () => {
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -49,20 +46,25 @@ export const Explainability: React.FC = () => {
 
   useEffect(() => {
     if (!selectedResultId) return;
+    setExplanation(null);
+    setError(null);
 
     const fetchShap = async () => {
       try {
         setGenerating(true);
-        const expData = await getExplanation(selectedResultId);
-        setExplanation(expData);
-      } catch (err) {
-        // If not cached, generate SHAP
+        // Try to get cached explanation first
         try {
-          const newExp = await generateExplanation(selectedResultId);
-          setExplanation(newExp);
-        } catch (genErr) {
-          console.error('Failed to generate SHAP explanation:', genErr);
+          const expData = await getExplanation(selectedResultId);
+          setExplanation(expData);
+          return;
+        } catch {
+          // Not cached — generate it
         }
+        const newExp = await generateExplanation(selectedResultId);
+        setExplanation(newExp);
+      } catch (genErr: any) {
+        console.error('Failed to generate SHAP explanation:', genErr);
+        setError('SHAP computation failed. The model may need a moment to initialize. Try again.');
       } finally {
         setGenerating(false);
       }
@@ -102,7 +104,7 @@ export const Explainability: React.FC = () => {
           >
             {results.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.candidate?.name || `Candidate #${r.candidate_id}`} — {r.score.toFixed(1)} pts ({r.decision})
+                {r.candidate?.name || `Candidate #${r.candidate_id}`} — {r.score.toFixed(1)} pts ({r.decision.toUpperCase()})
               </option>
             ))}
           </select>
@@ -136,7 +138,11 @@ export const Explainability: React.FC = () => {
                   </div>
                   <div>
                     <span className="text-slate-400 block">Skills Match:</span>
-                    <span className="font-mono text-white font-semibold">{cand?.skills_match_score}%</span>
+                    <span className="font-mono text-white font-semibold">
+                      {explanation?.feature_contributions?.skills_match !== undefined
+                        ? `${(explanation.feature_contributions.skills_match * 100).toFixed(0)}%`
+                        : `${cand?.skills_match_score ?? '—'}%`}
+                    </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block">Career Gap:</span>
@@ -158,10 +164,10 @@ export const Explainability: React.FC = () => {
                   <span>Natural Language Audit Summary</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  {explanation?.summary_text || (
-                    generating ? 'Computing mathematical SHAP attributions...' :
-                    `The model assigned a score of ${selectedResult.score.toFixed(1)}/100 leading to a ${selectedResult.decision} recommendation. Skills match and experience had the strongest positive influence.`
-                  )}
+                  {generating
+                    ? 'Computing mathematical SHAP attributions...'
+                    : explanation?.natural_language
+                    || `The model assigned a score of ${selectedResult.score.toFixed(1)}/100 leading to a ${selectedResult.decision.toUpperCase()} recommendation. Skills match and experience had the strongest positive influence.`}
                 </p>
               </div>
 
@@ -186,21 +192,48 @@ export const Explainability: React.FC = () => {
                   </p>
                 </div>
                 {generating && (
-                  <span className="text-[10px] font-mono text-indigo-400 animate-pulse">
-                    Computing SHAP...
-                  </span>
+                  <div className="flex items-center gap-2 text-[11px] font-mono text-indigo-400">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Computing SHAP values...</span>
+                  </div>
                 )}
               </div>
 
               <div className="pt-2">
-                {explanation?.shap_values ? (
-                  <ShapChart
-                    shapValues={explanation.shap_values}
-                    baseValue={explanation.base_value}
-                  />
+                {error ? (
+                  <div className="h-64 flex flex-col items-center justify-center gap-3">
+                    <p className="text-xs text-rose-400">{error}</p>
+                    <button
+                      onClick={() => {
+                        if (selectedResultId) {
+                          setError(null);
+                          setGenerating(true);
+                          generateExplanation(selectedResultId)
+                            .then(setExplanation)
+                            .catch(() => setError('SHAP generation failed. Please try again.'))
+                            .finally(() => setGenerating(false));
+                        }
+                      }}
+                      className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition"
+                    >
+                      Retry SHAP Computation
+                    </button>
+                  </div>
+                ) : generating ? (
+                  <div className="h-64 flex flex-col items-center justify-center gap-3">
+                    <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                    <p className="text-xs text-slate-400">
+                      Running Linear SHAP attributions on {results.length > 0 ? 'this candidate' : 'candidate'}...
+                    </p>
+                    <p className="text-[10px] text-slate-600">
+                      LinearExplainer initializes on first run — subsequent runs are instant
+                    </p>
+                  </div>
+                ) : explanation?.feature_contributions ? (
+                  <ShapChart shapValues={explanation.feature_contributions} />
                 ) : (
                   <div className="h-64 flex items-center justify-center text-xs text-slate-500">
-                    Calculating SHAP feature values...
+                    No SHAP data available. Try selecting a different candidate.
                   </div>
                 )}
               </div>
@@ -213,13 +246,19 @@ export const Explainability: React.FC = () => {
                   <TrendingUp className="w-4 h-4" /> Top Positive Influences (+ Score)
                 </div>
                 <ul className="space-y-2 text-xs">
-                  {explanation?.top_positive_features && explanation.top_positive_features.length > 0 ? (
-                    explanation.top_positive_features.map((feat, idx) => (
+                  {explanation?.top_positive && explanation.top_positive.length > 0 ? (
+                    explanation.top_positive.map((feat, idx) => (
                       <li key={idx} className="flex justify-between items-center py-1 border-b border-emerald-500/10">
-                        <span className="text-slate-300 capitalize">{feat.feature.replace(/_/g, ' ')}</span>
-                        <span className="font-mono font-bold text-emerald-400">+{feat.shap_value.toFixed(3)}</span>
+                        <span className="text-slate-300 capitalize">
+                          {feat.feature}
+                        </span>
+                        <span className="font-mono font-bold text-emerald-400">+{feat.value.toFixed(4)}</span>
                       </li>
                     ))
+                  ) : generating ? (
+                    <li className="text-slate-500 italic flex items-center gap-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Computing...
+                    </li>
                   ) : (
                     <li className="text-slate-500 italic">No significant positive features</li>
                   )}
@@ -231,19 +270,49 @@ export const Explainability: React.FC = () => {
                   <TrendingDown className="w-4 h-4" /> Top Negative Influences (- Score)
                 </div>
                 <ul className="space-y-2 text-xs">
-                  {explanation?.top_negative_features && explanation.top_negative_features.length > 0 ? (
-                    explanation.top_negative_features.map((feat, idx) => (
+                  {explanation?.top_negative && explanation.top_negative.length > 0 ? (
+                    explanation.top_negative.map((feat, idx) => (
                       <li key={idx} className="flex justify-between items-center py-1 border-b border-rose-500/10">
-                        <span className="text-slate-300 capitalize">{feat.feature.replace(/_/g, ' ')}</span>
-                        <span className="font-mono font-bold text-rose-400">{feat.shap_value.toFixed(3)}</span>
+                        <span className="text-slate-300 capitalize">
+                          {feat.feature}
+                        </span>
+                        <span className="font-mono font-bold text-rose-400">{feat.value.toFixed(4)}</span>
                       </li>
                     ))
+                  ) : generating ? (
+                    <li className="text-slate-500 italic flex items-center gap-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Computing...
+                    </li>
                   ) : (
                     <li className="text-slate-500 italic">No negative feature penalties</li>
                   )}
                 </ul>
               </div>
             </div>
+
+            {/* Model Coefficients Reference */}
+            {explanation?.model_coefficients && (
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <BrainCircuit className="w-4 h-4 text-indigo-400" />
+                  Logistic Regression Model Coefficients (Transparency Reference)
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+                  {Object.entries(explanation.model_coefficients)
+                    .filter(([k]) => k !== 'intercept')
+                    .map(([feature, coeff]) => (
+                      <div key={feature} className="p-2 rounded-lg bg-slate-850 border border-slate-800">
+                        <span className="block text-slate-400 capitalize text-[10px]">
+                          {feature.replace(/_/g, ' ')}
+                        </span>
+                        <span className={`font-mono font-bold ${coeff > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {coeff > 0 ? '+' : ''}{coeff.toFixed(4)}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (

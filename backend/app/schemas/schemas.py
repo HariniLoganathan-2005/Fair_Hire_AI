@@ -94,7 +94,7 @@ class ResumeResponse(BaseModel):
 class ScreeningRunRequest(BaseModel):
     job_id: int
     candidate_ids: Optional[list[int]] = None  # None = screen all candidates
-    threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    threshold: float = Field(default=0.5, ge=0.0, le=100.0)
 
 
 class ScreeningResultResponse(BaseModel):
@@ -130,8 +130,8 @@ class ExplanationResponse(BaseModel):
 # ─── Fairness ───────────────────────────────────────────────────────────────
 
 class FairnessRunRequest(BaseModel):
-    job_id: int
-    threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+    job_id: Optional[int] = None
+    threshold: float = Field(default=0.5, ge=0.0, le=100.0)
 
 
 class FairnessAuditResponse(BaseModel):

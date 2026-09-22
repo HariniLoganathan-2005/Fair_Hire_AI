@@ -49,7 +49,7 @@ export interface ScreeningResult {
   job_id: number;
   model_version_id: number;
   score: number;
-  decision: 'shortlisted' | 'rejected';
+  decision: string; // 'SHORTLISTED' | 'REJECTED' from backend
   confidence?: number;
   threshold_used: number;
   created_at: string;
@@ -59,15 +59,21 @@ export interface ScreeningResult {
   counterfactual?: Counterfactual;
 }
 
+export interface ExplanationFeature {
+  feature: string;
+  feature_key?: string;
+  value: number;
+}
+
 export interface Explanation {
   id: number;
   screening_result_id: number;
-  shap_values: Record<string, number>;
-  base_value: number;
-  top_positive_features: Array<{ feature: string; shap_value: number; raw_value?: number }>;
-  top_negative_features: Array<{ feature: string; shap_value: number; raw_value?: number }>;
-  summary_text: string;
-  created_at: string;
+  feature_contributions: Record<string, number>;
+  top_positive: ExplanationFeature[];
+  top_negative: ExplanationFeature[];
+  natural_language?: string;
+  model_coefficients?: Record<string, number>;
+  is_demo_data?: boolean;
 }
 
 export interface FairnessMetric {
@@ -103,11 +109,16 @@ export interface FairnessAudit {
 
 export interface CounterfactualChange {
   feature: string;
-  current_value: any;
-  required_value: any;
-  difference: any;
-  classification: 'LEGITIMATE' | 'MODEL_SENSITIVE' | 'NOT_RECOMMENDED';
-  explanation: string;
+  feature_key?: string;
+  original_value: number;
+  modified_value: number;
+  original_score: number;
+  new_score: number;
+  score_change: number;
+  new_decision?: string;
+  category: 'LEGITIMATE' | 'MODEL-SENSITIVE' | 'NOT RECOMMENDED';
+  action?: string;
+  note?: string | null;
 }
 
 export interface Counterfactual {
@@ -115,12 +126,8 @@ export interface Counterfactual {
   screening_result_id: number;
   original_score: number;
   original_decision: string;
-  target_decision: string;
-  changes_required: CounterfactualChange[];
-  minimal_perturbation_score: number;
-  feasibility_notes: string;
-  disclaimer: string;
-  created_at: string;
+  changes: CounterfactualChange[];
+  is_demo_data?: boolean;
 }
 
 export interface HumanReview {

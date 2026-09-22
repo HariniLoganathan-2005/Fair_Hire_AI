@@ -32,6 +32,9 @@ def run_screening(request: ScreeningRunRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="No candidates found")
 
     # Get or create model version
+    raw_threshold = request.threshold
+    norm_threshold = raw_threshold / 100.0 if raw_threshold > 1.0 else raw_threshold
+
     model_version = db.query(ModelVersion).filter(ModelVersion.is_active == True).first()
     if not model_version:
         metadata = predictor.get_metadata()
@@ -42,7 +45,7 @@ def run_screening(request: ScreeningRunRequest, db: Session = Depends(get_db)):
             features=metadata.get("features", []),
             dataset_name=metadata.get("dataset_name", "Synthetic Candidate Dataset"),
             metrics=metadata.get("metrics", {}),
-            threshold=request.threshold,
+            threshold=norm_threshold,
             is_active=True,
         )
         db.add(model_version)
@@ -70,7 +73,7 @@ def run_screening(request: ScreeningRunRequest, db: Session = Depends(get_db)):
             "career_gap_count": candidate.career_gap_count or 0,
         }
 
-        prediction = predictor.predict(features, request.threshold)
+        prediction = predictor.predict(features, norm_threshold)
 
         result = ScreeningResult(
             candidate_id=candidate.id,
@@ -78,7 +81,7 @@ def run_screening(request: ScreeningRunRequest, db: Session = Depends(get_db)):
             model_version_id=model_version.id,
             score=prediction["score"],
             decision=prediction["decision"],
-            threshold_used=request.threshold,
+            threshold_used=norm_threshold,
             features_used=features,
             is_demo_data=candidate.is_demo_data,
         )

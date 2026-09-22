@@ -13,9 +13,12 @@ router = APIRouter()
 @router.post("/run", response_model=FairnessAuditResponse)
 def run_fairness_audit(request: FairnessRunRequest, db: Session = Depends(get_db)):
     """Run a fairness audit on screening results for a job."""
-    results = db.query(ScreeningResult).filter(ScreeningResult.job_id == request.job_id).all()
+    query = db.query(ScreeningResult)
+    if request.job_id is not None:
+        query = query.filter(ScreeningResult.job_id == request.job_id)
+    results = query.all()
     if not results:
-        raise HTTPException(status_code=400, detail="No screening results found for this job")
+        raise HTTPException(status_code=400, detail="No screening results found. Run screening first.")
 
     # Gather data
     candidate_ids = [r.candidate_id for r in results]
@@ -35,11 +38,12 @@ def run_fairness_audit(request: FairnessRunRequest, db: Session = Depends(get_db
     ]
 
     # Calculate actual fairness metrics
+    norm_threshold = request.threshold / 100.0 if request.threshold > 1.0 else request.threshold
     metrics = calculate_fairness_metrics(
         scores=scores,
         decisions=decisions,
         career_gap_flags=career_gap_flags,
-        threshold=request.threshold,
+        threshold=norm_threshold,
         demographic_genders=demographic_genders,
         demographic_age_groups=demographic_age_groups,
     )
@@ -54,7 +58,7 @@ def run_fairness_audit(request: FairnessRunRequest, db: Session = Depends(get_db
         job_id=request.job_id,
         dataset_name="Synthetic Candidate Dataset" if is_demo else "Uploaded Candidates",
         candidate_count=len(results),
-        threshold_used=request.threshold,
+        threshold_used=norm_threshold,
         selection_rate_no_gap=metrics.get("selection_rate_no_gap"),
         selection_rate_gap=metrics.get("selection_rate_gap"),
         disparate_impact_ratio=metrics.get("disparate_impact_ratio"),
