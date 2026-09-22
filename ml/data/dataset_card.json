@@ -1,0 +1,30 @@
+{
+  "name": "Synthetic Candidate Dataset",
+  "description": "SYNTHETIC dataset created for academic demonstration of FairHire AI. This data does NOT represent real candidates or real hiring outcomes.",
+  "source": "Programmatically generated for Responsible AI coursework",
+  "n_records": 200,
+  "features": [
+    "skills_match",
+    "experience_years",
+    "education_match",
+    "project_count",
+    "certification_count",
+    "career_gap_months",
+    "career_gap_count"
+  ],
+  "target": "shortlisted",
+  "demographic_attributes": [
+    "demographic_gender",
+    "demographic_age_group"
+  ],
+  "demographic_note": "SYNTHETIC demographic attributes included ONLY for fairness audit demonstration. NOT used as model features. NOT inferred from real candidate data.",
+  "limitations": [
+    "Entirely synthetic \u2014 does not reflect real-world hiring patterns",
+    "Latent scoring function is simplified",
+    "Demographic attributes are randomly assigned",
+    "Career gap effects are artificial correlations",
+    "Not suitable for drawing real-world conclusions"
+  ],
+  "seed": 42,
+  "generated_by": "FairHire AI dataset generator"
+}

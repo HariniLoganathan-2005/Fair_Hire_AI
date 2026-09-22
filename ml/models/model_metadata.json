@@ -1,0 +1,57 @@
+{
+  "model_name": "Resume Screening v1",
+  "model_type": "LogisticRegression",
+  "version": "1.0",
+  "training_date": "2026-09-21T19:18:10.551065+00:00",
+  "dataset_name": "Synthetic Candidate Dataset",
+  "dataset_note": "SYNTHETIC dataset for academic demonstration only",
+  "features": [
+    "skills_match",
+    "experience_years",
+    "education_match",
+    "project_count",
+    "certification_count",
+    "career_gap_months",
+    "career_gap_count"
+  ],
+  "target": "shortlisted",
+  "protected_attributes_excluded": [
+    "demographic_gender",
+    "demographic_age_group"
+  ],
+  "default_threshold": 0.5,
+  "metrics": {
+    "accuracy": 0.875,
+    "precision": 0.8462,
+    "recall": 0.9565,
+    "f1_score": 0.898
+  },
+  "coefficients": {
+    "skills_match": 0.8005,
+    "experience_years": 2.1245,
+    "education_match": 0.5848,
+    "project_count": 0.1828,
+    "certification_count": 0.5729,
+    "career_gap_months": -0.1254,
+    "career_gap_count": 0.0199
+  },
+  "intercept": 0.6385,
+  "train_size": 160,
+  "test_size": 40,
+  "scaler": "StandardScaler",
+  "random_seed": 42,
+  "limitations": [
+    "Trained on synthetic data \u2014 not representative of real hiring",
+    "Simple Logistic Regression \u2014 may not capture complex patterns",
+    "Career gap feature may correlate with protected attributes in real data",
+    "Feature engineering is simplified for demonstration purposes",
+    "Threshold choice significantly affects selection rates and fairness metrics"
+  ],
+  "responsible_ai_notes": [
+    "Protected attributes are excluded from model features",
+    "Career gap is included as a feature for transparency \u2014 its effect is measured in fairness audit",
+    "Model coefficients are exposed for interpretability",
+    "SHAP explanations are available for individual predictions",
+    "This model is for academic demonstration only"
+  ]
+}
