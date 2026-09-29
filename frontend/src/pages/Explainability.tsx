@@ -139,9 +139,11 @@ export const Explainability: React.FC = () => {
                   <div>
                     <span className="text-slate-400 block">Skills Match:</span>
                     <span className="font-mono text-white font-semibold">
-                      {explanation?.feature_contributions?.skills_match !== undefined
-                        ? `${(explanation.feature_contributions.skills_match * 100).toFixed(0)}%`
-                        : `${cand?.skills_match_score ?? '—'}%`}
+                      {selectedResult.features_used?.skills_match !== undefined
+                        ? `${Math.round(selectedResult.features_used.skills_match)}%`
+                        : cand?.skills?.length
+                        ? `${cand.skills.length} skills`
+                        : '—'}
                     </span>
                   </div>
                   <div>

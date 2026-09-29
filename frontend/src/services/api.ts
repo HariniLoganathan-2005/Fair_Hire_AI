@@ -33,7 +33,7 @@ export const getDemoStatus = async () => {
 
 // Dashboard APIs
 export const getDashboardStats = async (jobId?: number): Promise<DashboardStats> => {
-  const response = await apiClient.get('/dashboard/stats', {
+  const response = await apiClient.get('/dashboard', {
     params: jobId ? { job_id: jobId } : undefined,
   });
   return response.data;
@@ -113,10 +113,13 @@ export const runFairnessAudit = async (params?: { job_id?: number; threshold?: n
 };
 
 export const getLatestFairnessAudit = async (jobId?: number): Promise<FairnessAudit> => {
-  const response = await apiClient.get('/fairness/latest', {
+  const response = await apiClient.get('/fairness', {
     params: jobId ? { job_id: jobId } : undefined,
   });
-  return response.data;
+  // Backend returns a list ordered by created_at desc; take the first
+  const list: FairnessAudit[] = response.data;
+  if (!list || list.length === 0) throw new Error('No fairness audits found');
+  return list[0];
 };
 
 // Counterfactual APIs

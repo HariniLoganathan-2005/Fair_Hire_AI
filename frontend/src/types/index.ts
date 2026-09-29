@@ -52,6 +52,16 @@ export interface ScreeningResult {
   decision: string; // 'SHORTLISTED' | 'REJECTED' from backend
   confidence?: number;
   threshold_used: number;
+  features_used?: {
+    skills_match: number;
+    experience_years: number;
+    education_match: number;
+    project_count: number;
+    certification_count: number;
+    career_gap_months: number;
+    career_gap_count: number;
+  };
+  is_demo_data?: boolean;
   created_at: string;
   candidate?: Candidate;
   job?: Job;
@@ -88,16 +98,23 @@ export interface FairnessAudit {
   id: number;
   job_id?: number;
   model_version_id?: number;
+  dataset_name?: string;
+  candidate_count: number;          // backend field name
+  sample_size?: number;             // alias used in some older responses
+  threshold_used?: number;
   selection_rate_no_gap: number;
   selection_rate_gap: number;
   disparate_impact_ratio: number;
-  demographic_parity_diff: number;
+  demographic_parity_difference: number;   // backend field name
+  demographic_parity_diff?: number;        // alias kept for safety
   career_gap_penalty_estimate?: number;
-  sample_size: number;
-  is_fair: boolean;
+  is_fair?: boolean;
+  is_demo_data?: boolean;
   notes?: string;
   created_at: string;
   metrics_breakdown?: FairnessMetric[];
+  demographic_analysis?: Record<string, any>;
+  career_gap_analysis?: Record<string, any>;
   group_statistics?: Record<string, any>;
   controlled_experiment?: {
     avg_score_original: number;

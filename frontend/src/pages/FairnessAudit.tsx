@@ -128,14 +128,14 @@ export const FairnessAudit: React.FC = () => {
             />
             <FairnessMetricCard
               title="Demographic Parity Difference"
-              value={`${(audit.demographic_parity_diff * 100).toFixed(1)}%`}
-              status={Math.abs(audit.demographic_parity_diff) <= 0.1 ? 'fair' : Math.abs(audit.demographic_parity_diff) <= 0.2 ? 'borderline' : 'disparate'}
+              value={`${((audit.demographic_parity_difference ?? 0) * 100).toFixed(1)}%`}
+              status={Math.abs(audit.demographic_parity_difference ?? 0) <= 0.1 ? 'fair' : Math.abs(audit.demographic_parity_difference ?? 0) <= 0.2 ? 'borderline' : 'disparate'}
               thresholdRule="Diff <= 10.0%"
               description="Absolute difference in selection rates between candidates with and without career breaks."
             />
             <FairnessMetricCard
               title="Audited Sample Size"
-              value={`${audit.sample_size} candidates`}
+              value={`${audit.candidate_count ?? audit.sample_size ?? 0} candidates`}
               status="fair"
               thresholdRule="N >= 5"
               description="Total pool of screened candidates evaluated in this audit run."

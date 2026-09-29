@@ -38,17 +38,63 @@ async def upload_resumes(
         with open(file_path, "wb") as f:
             shutil.copyfileobj(file.file, f)
 
-        # Create placeholder candidate (will be populated after parsing)
-        candidate = Candidate(name=os.path.splitext(file.filename)[0])
+        # Parse immediately
+        candidate_name = os.path.splitext(file.filename)[0]
+        parsed = {}
+        try:
+            parsed = parse_resume(file_path)
+            if parsed and not parsed.get("error"):
+                candidate_name = parsed.get("name") or candidate_name
+        except Exception as e:
+            print(f"Error parsing uploaded file {file.filename}: {e}")
+
+        # Create candidate with parsed information
+        candidate = Candidate(
+            name=candidate_name,
+            email=parsed.get("email"),
+            phone=parsed.get("phone"),
+            education=parsed.get("education"),
+            education_level=parsed.get("education_level", "Bachelor's"),
+            skills=parsed.get("skills", []),
+            total_experience_years=parsed.get("total_experience_years", 0.0),
+            career_gap_months=parsed.get("career_gap_months", 0.0),
+            career_gap_count=parsed.get("career_gap_count", 0),
+            projects_count=parsed.get("projects_count", 0),
+            certifications_count=parsed.get("certifications_count", 0),
+            is_demo_data=False,
+        )
         db.add(candidate)
         db.flush()
+
+        # Add experiences
+        for start_str, end_str, context in parsed.get("date_ranges", []):
+            exp = Experience(
+                candidate_id=candidate.id,
+                job_title=context[:200] if context else None,
+                start_date=start_str,
+                end_date=end_str,
+            )
+            db.add(exp)
+
+        # Add career gap entries
+        for gap in parsed.get("career_gaps", []):
+            gap_exp = Experience(
+                candidate_id=candidate.id,
+                job_title="Career Gap",
+                start_date=gap.get("start"),
+                end_date=gap.get("end"),
+                is_career_gap=True,
+                gap_months=gap.get("months", 0),
+            )
+            db.add(gap_exp)
 
         resume = Resume(
             candidate_id=candidate.id,
             filename=file.filename,
             file_path=file_path,
             file_type=ext.lstrip("."),
-            parse_status="uploaded",
+            extracted_text=parsed.get("raw_text", ""),
+            parse_status="completed" if (parsed and not parsed.get("error")) else "uploaded",
         )
         db.add(resume)
         db.flush()

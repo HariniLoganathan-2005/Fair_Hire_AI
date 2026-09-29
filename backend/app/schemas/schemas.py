@@ -236,12 +236,31 @@ class CareerGapComparisonResponse(BaseModel):
 # ─── Dashboard ──────────────────────────────────────────────────────────────
 
 class DashboardStats(BaseModel):
+    # Counts
     total_candidates: int = 0
+    total_jobs: int = 0
+    # Legacy field names kept for backward compat
     screened: int = 0
     shortlisted: int = 0
     rejected: int = 0
+    # Flat names the frontend expects
+    total_screened: int = 0
+    shortlisted_count: int = 0
+    rejected_count: int = 0
+    overall_selection_rate: float = 0.0
     career_gap_candidates: int = 0
+    # Gap/no-gap split (flat)
+    no_gap_count: int = 0
+    no_gap_shortlisted: int = 0
+    no_gap_selection_rate: float = 0.0
+    gap_count: int = 0
+    gap_shortlisted: int = 0
+    gap_selection_rate: float = 0.0
+    # Fairness
+    disparate_impact_ratio: float = 0.0
     fairness_alerts: int = 0
+    pending_human_reviews: int = 0
+    # Charts / nested
     recent_audit: Optional[dict] = None
     score_distribution: Optional[list[dict]] = None
     selection_by_gap: Optional[dict] = None
